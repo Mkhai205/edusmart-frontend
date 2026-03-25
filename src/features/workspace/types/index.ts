@@ -1,0 +1,260 @@
+export type ExtractionStatus = "pending" | "processing" | "completed" | "failed";
+
+export interface DocumentListItem {
+    document_id: string;
+    title: string;
+    content_type: string;
+    file_size: number;
+    total_pages: number | null;
+    extraction_status: ExtractionStatus;
+    created_at: string;
+}
+
+export interface DocumentDownloadResponse {
+    document_id: string;
+    download_url: string;
+    expires_in_seconds: number;
+}
+
+export interface DocumentUploadResponse {
+    document_id: string;
+    title: string;
+    file_url: string;
+    object_key: string;
+    content_type: string;
+    file_size: number;
+    total_pages: number | null;
+    is_public: boolean;
+    extraction_status: ExtractionStatus;
+    created_at: string;
+    download_url: string;
+}
+
+export interface DocumentDetail {
+    document_id: string;
+    title: string;
+    file_url: string;
+    object_key: string;
+    content_type: string;
+    file_size: number;
+    total_pages: number | null;
+    is_public: boolean;
+    extraction_status: ExtractionStatus;
+    extraction_error: string | null;
+    extracted_at: string | null;
+    created_at: string;
+    download_url: string;
+}
+
+export interface LearningGoalDashboard {
+    in_progress_count: number;
+    completed_count: number;
+    overdue_count: number;
+    due_today_count: number;
+    due_this_week_count: number;
+}
+
+export interface QuizListItem {
+    quiz_id: string;
+    document_id: string;
+    title: string;
+    quiz_status: "pending" | "processing" | "completed" | "failed";
+    question_count: number;
+    difficulty: "easy" | "medium" | "hard";
+    created_at: string;
+}
+
+export interface QuizQuestion {
+    question_index: number;
+    question_text: string;
+    options: string[];
+    correct_option_index: number;
+    hint: string;
+    correct_explanation: string;
+    incorrect_explanations: string[];
+    option_explanations: string[];
+}
+
+export interface QuizDetail {
+    quiz_id: string;
+    document_id: string;
+    title: string;
+    quiz_status: "pending" | "processing" | "completed" | "failed";
+    question_count: number;
+    difficulty: "easy" | "medium" | "hard";
+    time_limit_seconds: number;
+    questions: QuizQuestion[] | null;
+    quiz_error: string | null;
+    created_at: string;
+}
+
+export interface QuizSubmitAnswer {
+    question_index: number;
+    selected_option_index: number | null;
+}
+
+export interface QuizSubmitResultItem {
+    question_index: number;
+    selected_option_index: number | null;
+    correct_option_index: number;
+    is_correct: boolean;
+    is_skipped: boolean;
+    explanation: string;
+}
+
+export interface QuizSubmitResponse {
+    attempt_id: string;
+    quiz_id: string;
+    score: number;
+    total_questions: number;
+    correct_count: number;
+    incorrect_count: number;
+    skipped_count: number;
+    time_spent_seconds: number;
+    completed_at: string;
+    results: QuizSubmitResultItem[];
+}
+
+export interface QuizQueuedResponse {
+    quiz_id: string;
+    document_id: string;
+    quiz_status: "pending" | "processing" | "completed" | "failed";
+    question_count: number;
+    difficulty: "easy" | "medium" | "hard";
+    time_limit_seconds: number;
+    created_at: string;
+}
+
+export interface QuizGenerateRequest {
+    document_id: string;
+    question_count?: number;
+    difficulty?: "easy" | "medium" | "hard";
+    start_page?: number;
+    end_page?: number;
+    time_limit_seconds?: number;
+}
+
+export interface FlashcardSetListItem {
+    set_id: string;
+    document_id: string;
+    title: string;
+    generation_status: "pending" | "processing" | "completed" | "failed";
+    card_count: number;
+    created_at: string;
+}
+
+export interface FlashcardSetDetail {
+    set_id: string;
+    document_id: string;
+    title: string;
+    generation_status: "pending" | "processing" | "completed" | "failed";
+    generation_error: string | null;
+    card_count: number;
+    created_at: string;
+}
+
+export interface FlashcardCard {
+    card_id: string;
+    set_id: string;
+    card_type: "term_definition" | "qa" | "cloze";
+    front: string;
+    back: string;
+    image_url: string | null;
+    image_keyword: string | null;
+    ease_factor: number | null;
+    interval_days: number | null;
+    repetitions: number;
+    next_review_at: string | null;
+    last_rating: "hard" | "medium" | "easy" | null;
+}
+
+export interface FlashcardReviewResponse {
+    card_id: string;
+    rating: "hard" | "medium" | "easy";
+    ease_factor: number;
+    interval_days: number;
+    repetitions: number;
+    next_review_at: string;
+}
+
+export interface FlashcardQueuedResponse {
+    set_id: string;
+    document_id: string;
+    title: string;
+    generation_status: "pending" | "processing" | "completed" | "failed";
+    card_count_requested: number;
+    created_at: string;
+}
+
+export interface FlashcardGenerateRequest {
+    document_id: string;
+    title?: string;
+    card_count?: number;
+    start_page?: number;
+    end_page?: number;
+    include_images?: boolean;
+}
+
+export type GoalRecurrenceType = "daily" | "weekly" | "monthly";
+
+export interface LearningGoal {
+    id: string;
+    title: string;
+    description: string | null;
+    recurrence_type: GoalRecurrenceType;
+    target_date: string;
+    progress: number;
+    status: "in_progress" | "completed" | "overdue" | "archived";
+    created_at: string;
+}
+
+export interface LearningGoalCreateRequest {
+    title: string;
+    description?: string;
+    document_id?: string;
+    recurrence_type: GoalRecurrenceType;
+    target_date: string;
+    reminder_enabled?: boolean;
+}
+
+export type SummaryMode = "full_map_reduce" | "page_range" | "keyword_hybrid";
+
+export interface SummarySourceChunk {
+    chunk_id: string;
+    page_number: number;
+    chunk_index: number;
+    bbox: number[] | null;
+    similarity: number | null;
+}
+
+export interface DocumentSummaryStatus {
+    summary_id: string;
+    document_id: string;
+    summary_status: "pending" | "processing" | "completed" | "failed";
+    mode: SummaryMode;
+    options: Record<string, unknown>;
+    content_markdown: string | null;
+    summary_error: string | null;
+    share_token: string | null;
+    sources: SummarySourceChunk[] | null;
+    completed_at: string | null;
+    created_at: string;
+}
+
+export interface DocumentSummaryQueuedResponse {
+    summary_id: string;
+    document_id: string;
+    summary_status: "pending" | "processing" | "completed" | "failed";
+    mode: SummaryMode;
+    options: Record<string, unknown>;
+    created_at: string;
+}
+
+export interface DocumentSummaryRequest {
+    mode: SummaryMode;
+    start_page?: number;
+    end_page?: number;
+    keywords?: string[];
+    search_limit?: number;
+    min_similarity?: number;
+}

@@ -55,11 +55,13 @@ async function parseResponse<T>(response: Response): Promise<T> {
 }
 
 async function rawRequest(path: string, init?: RequestInit): Promise<Response> {
+    const isFormData = typeof FormData !== "undefined" && init?.body instanceof FormData;
+
     return fetch(buildUrl(path), {
         ...init,
         credentials: "include",
         headers: {
-            "Content-Type": "application/json",
+            ...(isFormData ? {} : { "Content-Type": "application/json" }),
             ...(init?.headers ?? {}),
         },
     });

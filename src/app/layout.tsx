@@ -1,21 +1,20 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { JetBrains_Mono, Manrope } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-    variable: "--font-geist-sans",
+const appSans = Manrope({
+    variable: "--font-app-sans",
     subsets: ["latin"],
 });
 
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
+const appMono = JetBrains_Mono({
+    variable: "--font-app-mono",
     subsets: ["latin"],
 });
 
 export const metadata: Metadata = {
-    title: "EduSmart",
-    description:
-        "An AI-powered educational platform that provides personalized learning experiences for students of all ages.",
+    title: "EduSmart | YouLearn Workspace",
+    description: "AI learning workspace with markdown, coding playground, and online PDF study view.",
 };
 
 export default function RootLayout({
@@ -25,7 +24,7 @@ export default function RootLayout({
 }>) {
     return (
         <html lang="en">
-            <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+            <body className={`${appSans.variable} ${appMono.variable} antialiased`}>
                 {children}
             </body>
         </html>
