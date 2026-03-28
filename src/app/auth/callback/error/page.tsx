@@ -38,7 +38,7 @@ export default function AuthCallbackErrorPage() {
                 <div className="mt-7 flex flex-wrap justify-center gap-3">
                     <GoogleLoginButton label="Đăng nhập lại" />
                     <Link
-                        href="/"
+                        href="/login"
                         className="inline-flex items-center justify-center rounded-full border border-slate-600 px-6 py-3 text-sm font-semibold text-slate-200 transition hover:border-slate-400 hover:text-white"
                     >
                         Quay về trang chủ

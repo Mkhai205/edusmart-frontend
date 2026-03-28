@@ -16,7 +16,7 @@ export default function AuthCallbackSuccessPage() {
                 router.replace("/dashboard");
                 return;
             }
-            router.replace("/");
+            router.replace("/login");
         };
 
         void settleSession();

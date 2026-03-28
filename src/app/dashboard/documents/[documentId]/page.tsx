@@ -1,10 +1,10 @@
-import { DocumentDetailShell } from "@/features/workspace/components/document-detail-shell";
+import { redirect } from "next/navigation";
 
 interface DocumentDetailPageProps {
     params: Promise<{ documentId: string }>;
 }
 
 export default async function DocumentDetailPage({ params }: DocumentDetailPageProps) {
-    const { documentId } = await params;
-    return <DocumentDetailShell documentId={documentId} />;
+    await params;
+    redirect("/documents");
 }
