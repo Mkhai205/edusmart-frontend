@@ -10,11 +10,14 @@ import {
   Download,
   FileUp,
   CheckCircle2,
+  Layers,
+  HelpCircle,
 } from "lucide-react";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { MarkdownPreview } from "@/features/workspace/components/markdown-preview";
 import {
+  getDocumentDetail,
   getDocumentDownloadUrl,
   getLatestSummaryStatus,
   getSummaryStatus,
@@ -22,6 +25,11 @@ import {
   queueSummary,
   uploadDocument,
 } from "@/features/workspace/services/documentsService";
+import {
+  queueFlashcardGeneration,
+  queueQuizGeneration,
+} from "@/features/workspace/services/learningService";
+import { ApiError } from "@/libs/apiClient";
 import type { DocumentListItem } from "@/features/workspace/types";
 
 function sleep(ms: number): Promise<void> {
@@ -53,8 +61,11 @@ export function Documents() {
   const [loading, setLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [isQueueingQuiz, setIsQueueingQuiz] = useState(false);
+  const [isQueueingFlashcard, setIsQueueingFlashcard] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [noSummaryDocumentIds, setNoSummaryDocumentIds] = useState<Set<string>>(new Set());
 
   useEffect(() => {
     if (!initialized) {
@@ -78,6 +89,11 @@ export function Documents() {
       setSelectedDocumentId(resolvedDocumentId);
 
       if (resolvedDocumentId) {
+        if (noSummaryDocumentIds.has(resolvedDocumentId)) {
+          setSummaryMarkdown("");
+          return;
+        }
+
         try {
           const latestSummary = await getLatestSummaryStatus(resolvedDocumentId);
           if (latestSummary.summary_status === "completed" && latestSummary.content_markdown) {
@@ -85,7 +101,14 @@ export function Documents() {
           } else {
             setSummaryMarkdown("");
           }
-        } catch {
+        } catch (loadSummaryError) {
+          if (loadSummaryError instanceof ApiError && loadSummaryError.status === 404) {
+            setNoSummaryDocumentIds((prev) => {
+              const next = new Set(prev);
+              next.add(resolvedDocumentId);
+              return next;
+            });
+          }
           setSummaryMarkdown("");
         }
       }
@@ -104,6 +127,108 @@ export function Documents() {
   const selectedDocument = useMemo(() => {
     return documents.find((item) => item.document_id === selectedDocumentId) ?? null;
   }, [documents, selectedDocumentId]);
+
+  const waitForExtractionCompleted = async (documentId: string): Promise<boolean> => {
+    for (let attempt = 0; attempt < 12; attempt += 1) {
+      const detail = await getDocumentDetail(documentId);
+
+      if (detail.extraction_status === "completed") {
+        return true;
+      }
+
+      if (detail.extraction_status === "failed") {
+        throw new Error(detail.extraction_error ?? "Trích xuất nội dung thất bại.");
+      }
+
+      await sleep(1500);
+    }
+
+    return false;
+  };
+
+  const generateSummaryForDocument = async (documentId: string) => {
+    const queued = await queueSummary(documentId, { mode: "full_map_reduce" });
+    let resolvedSummary: string | null = null;
+
+    for (let attempt = 0; attempt < 8; attempt += 1) {
+      const statusResponse = await getSummaryStatus(documentId, queued.summary_id);
+
+      if (statusResponse.summary_status === "completed" && statusResponse.content_markdown) {
+        resolvedSummary = statusResponse.content_markdown;
+        break;
+      }
+
+      if (statusResponse.summary_status === "failed") {
+        throw new Error(statusResponse.summary_error ?? "Tạo tóm tắt thất bại.");
+      }
+
+      await sleep(1500);
+    }
+
+    if (resolvedSummary) {
+      setNoSummaryDocumentIds((prev) => {
+        const next = new Set(prev);
+        next.delete(documentId);
+        return next;
+      });
+      setSummaryMarkdown(resolvedSummary);
+      setNotice("Đã cập nhật bản tóm tắt mới.");
+    } else {
+      setNotice("Tóm tắt đang tiếp tục xử lý. Vui lòng thử lại sau.");
+    }
+  };
+
+  const handleCreateQuiz = async () => {
+    if (!selectedDocumentId) {
+      setError("Vui lòng chọn tài liệu trước khi tạo quiz.");
+      return;
+    }
+
+    try {
+      setIsQueueingQuiz(true);
+      setError(null);
+      setNotice(null);
+
+      await queueQuizGeneration({
+        document_id: selectedDocumentId,
+        question_count: 10,
+        difficulty: "medium",
+      });
+
+      setNotice("Đã gửi yêu cầu tạo quiz. Bạn có thể mở tab Trắc nghiệm để xem kết quả.");
+    } catch (quizError) {
+      const message = quizError instanceof Error ? quizError.message : "Không thể tạo quiz.";
+      setError(message);
+    } finally {
+      setIsQueueingQuiz(false);
+    }
+  };
+
+  const handleCreateFlashcards = async () => {
+    if (!selectedDocumentId) {
+      setError("Vui lòng chọn tài liệu trước khi tạo flashcard.");
+      return;
+    }
+
+    try {
+      setIsQueueingFlashcard(true);
+      setError(null);
+      setNotice(null);
+
+      await queueFlashcardGeneration({
+        document_id: selectedDocumentId,
+        card_count: 20,
+        include_images: true,
+      });
+
+      setNotice("Đã gửi yêu cầu tạo flashcard. Bạn có thể mở tab Thẻ ghi nhớ để xem bộ thẻ.");
+    } catch (flashcardError) {
+      const message = flashcardError instanceof Error ? flashcardError.message : "Không thể tạo flashcard.";
+      setError(message);
+    } finally {
+      setIsQueueingFlashcard(false);
+    }
+  };
 
   const handleUpload = async () => {
     if (!selectedFile) {
@@ -139,30 +264,23 @@ export function Documents() {
       setError(null);
       setNotice(null);
 
-      const queued = await queueSummary(selectedDocumentId, { mode: "full_map_reduce" });
-      let resolvedSummary: string | null = null;
-
-      for (let attempt = 0; attempt < 8; attempt += 1) {
-        const statusResponse = await getSummaryStatus(selectedDocumentId, queued.summary_id);
-
-        if (statusResponse.summary_status === "completed" && statusResponse.content_markdown) {
-          resolvedSummary = statusResponse.content_markdown;
-          break;
-        }
-
-        if (statusResponse.summary_status === "failed") {
-          throw new Error(statusResponse.summary_error ?? "Tạo tóm tắt thất bại.");
-        }
-
-        await sleep(1500);
+      if (selectedDocument?.extraction_status === "failed") {
+        throw new Error("Tài liệu trích xuất thất bại, vui lòng tải lại tệp khác.");
       }
 
-      if (resolvedSummary) {
-        setSummaryMarkdown(resolvedSummary);
-        setNotice("Đã cập nhật bản tóm tắt mới.");
-      } else {
-        setNotice("Tóm tắt đang tiếp tục xử lý. Vui lòng thử lại sau.");
+      if (selectedDocument && selectedDocument.extraction_status !== "completed") {
+        setNotice("Tài liệu đang được trích xuất, hệ thống sẽ tự đợi rồi tạo tóm tắt.");
+        const extractionCompleted = await waitForExtractionCompleted(selectedDocumentId);
+
+        if (!extractionCompleted) {
+          setNotice("Tài liệu vẫn đang trích xuất. Vui lòng thử tạo tóm tắt lại sau ít phút.");
+          await loadDocuments(selectedDocumentId);
+          return;
+        }
       }
+
+      await generateSummaryForDocument(selectedDocumentId);
+      await loadDocuments(selectedDocumentId);
     } catch (summaryError) {
       const message = summaryError instanceof Error ? summaryError.message : "Không thể tạo tóm tắt.";
       setError(message);
@@ -273,11 +391,11 @@ export function Documents() {
             <button
               type="button"
               onClick={() => void handleGenerateSummary()}
-              disabled={isProcessing}
+              disabled={isProcessing || selectedDocument.extraction_status === "failed"}
               className="px-4 py-2 text-sm font-medium text-[#00A651] bg-green-50 hover:bg-green-100 rounded-lg transition-colors disabled:opacity-50 inline-flex items-center gap-2"
             >
               <FileSearch className="w-4 h-4" />
-              Tạo tóm tắt
+              {selectedDocument.extraction_status === "completed" ? "Tạo tóm tắt" : "Đợi trích xuất rồi tóm tắt"}
             </button>
 
             <button
@@ -331,6 +449,28 @@ export function Documents() {
                   <CheckCircle2 className="w-5 h-5 text-[#00A651]" />
                   <h3 className="font-semibold text-[#00A651]">Bản tóm tắt</h3>
                 </div>
+                {summaryMarkdown && (
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => void handleCreateQuiz()}
+                      disabled={isQueueingQuiz || isQueueingFlashcard}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg text-white bg-[#00A651] hover:bg-[#008f45] disabled:opacity-50 inline-flex items-center gap-1"
+                    >
+                      <HelpCircle className="w-3.5 h-3.5" />
+                      Tạo Quiz
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void handleCreateFlashcards()}
+                      disabled={isQueueingFlashcard || isQueueingQuiz}
+                      className="px-3 py-1.5 text-xs font-medium rounded-lg text-[#00A651] bg-white border border-green-300 hover:bg-green-100 disabled:opacity-50 inline-flex items-center gap-1"
+                    >
+                      <Layers className="w-3.5 h-3.5" />
+                      Tạo Flashcard
+                    </button>
+                  </div>
+                )}
               </div>
 
               <div className="p-6 flex-1 overflow-y-auto max-h-[600px] bg-white">

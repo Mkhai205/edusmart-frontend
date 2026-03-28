@@ -25,6 +25,7 @@ import {
 import { useAuthStore } from "@/features/auth/store/authStore";
 import { listDocuments } from "@/features/workspace/services/documentsService";
 import {
+  createLearningGoal,
   getLearningGoalDashboard,
   listFlashcardSets,
   listLearningGoals,
@@ -35,6 +36,7 @@ import type {
   FlashcardSetListItem,
   LearningGoal,
   LearningGoalDashboard,
+  GoalRecurrenceType,
   QuizListItem,
 } from "@/features/workspace/types";
 
@@ -66,6 +68,12 @@ export function Dashboard() {
   const [flashcards, setFlashcards] = useState<FlashcardSetListItem[]>([]);
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [goalDashboard, setGoalDashboard] = useState<LearningGoalDashboard | null>(null);
+  const [showGoalForm, setShowGoalForm] = useState(false);
+  const [goalTitle, setGoalTitle] = useState("");
+  const [goalTargetDate, setGoalTargetDate] = useState("");
+  const [goalRecurrence, setGoalRecurrence] = useState<GoalRecurrenceType>("weekly");
+  const [savingGoal, setSavingGoal] = useState(false);
+  const [goalError, setGoalError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -134,6 +142,47 @@ export function Dashboard() {
   const dueGoals = useMemo(() => {
     return goals.filter((goal) => goal.status === "in_progress").slice(0, 3);
   }, [goals]);
+
+  const handleCreateGoal = async () => {
+    if (!goalTitle.trim()) {
+      setGoalError("Vui lòng nhập tên mục tiêu.");
+      return;
+    }
+
+    if (!goalTargetDate) {
+      setGoalError("Vui lòng chọn ngày mục tiêu.");
+      return;
+    }
+
+    try {
+      setSavingGoal(true);
+      setGoalError(null);
+
+      await createLearningGoal({
+        title: goalTitle.trim(),
+        recurrence_type: goalRecurrence,
+        target_date: goalTargetDate,
+        reminder_enabled: true,
+      });
+
+      const [goalsResult, dashboardResult] = await Promise.all([
+        listLearningGoals(10, 0),
+        getLearningGoalDashboard(),
+      ]);
+
+      setGoals(goalsResult);
+      setGoalDashboard(dashboardResult);
+      setGoalTitle("");
+      setGoalTargetDate("");
+      setGoalRecurrence("weekly");
+      setShowGoalForm(false);
+    } catch (goalCreateError) {
+      const message = goalCreateError instanceof Error ? goalCreateError.message : "Không thể tạo mục tiêu.";
+      setGoalError(message);
+    } finally {
+      setSavingGoal(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -279,7 +328,58 @@ export function Dashboard() {
           </div>
 
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="text-lg font-bold text-gray-900 mb-4">Mục tiêu hôm nay</h3>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-gray-900">Mục tiêu hôm nay</h3>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowGoalForm((prev) => !prev);
+                  setGoalError(null);
+                }}
+                className="px-3 py-1.5 text-sm font-medium text-[#00A651] bg-green-50 hover:bg-green-100 rounded-lg transition-colors"
+              >
+                {showGoalForm ? "Đóng" : "Add mục tiêu"}
+              </button>
+            </div>
+
+            {showGoalForm && (
+              <div className="mb-4 rounded-xl border border-green-100 bg-green-50/40 p-3 space-y-3">
+                <input
+                  type="text"
+                  value={goalTitle}
+                  onChange={(event) => setGoalTitle(event.target.value)}
+                  placeholder="Nhập mục tiêu học tập"
+                  className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                />
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                  <input
+                    type="date"
+                    value={goalTargetDate}
+                    onChange={(event) => setGoalTargetDate(event.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                  />
+                  <select
+                    value={goalRecurrence}
+                    onChange={(event) => setGoalRecurrence(event.target.value as GoalRecurrenceType)}
+                    className="w-full px-3 py-2 text-sm border border-gray-200 rounded-lg"
+                  >
+                    <option value="daily">Hàng ngày</option>
+                    <option value="weekly">Hàng tuần</option>
+                    <option value="monthly">Hàng tháng</option>
+                  </select>
+                </div>
+                {goalError && <p className="text-xs text-red-600">{goalError}</p>}
+                <button
+                  type="button"
+                  disabled={savingGoal}
+                  onClick={() => void handleCreateGoal()}
+                  className="px-4 py-2 text-sm font-medium text-white bg-[#00A651] hover:bg-[#008f45] rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {savingGoal ? "Đang lưu..." : "Lưu mục tiêu"}
+                </button>
+              </div>
+            )}
+
             <div className="space-y-3">
               {dueGoals.length === 0 && (
                 <p className="text-sm text-gray-500">Bạn chưa có mục tiêu đang thực hiện.</p>

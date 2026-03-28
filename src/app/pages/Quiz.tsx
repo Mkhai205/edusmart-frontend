@@ -18,6 +18,7 @@ export function Quiz() {
   const [answers, setAnswers] = useState<Record<number, number>>({});
   const [currentQuestion, setCurrentQuestion] = useState(0);
   const [submitResult, setSubmitResult] = useState<QuizSubmitResponse | null>(null);
+  const [showFullResults, setShowFullResults] = useState(false);
 
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -66,6 +67,7 @@ export function Quiz() {
       setLoading(true);
       setError(null);
       setSubmitResult(null);
+      setShowFullResults(false);
       setAnswers({});
       setCurrentQuestion(0);
       setStartTime(Date.now());
@@ -136,6 +138,7 @@ export function Quiz() {
       });
 
       setSubmitResult(result);
+      setShowFullResults(false);
     } catch {
       setError("Nộp bài thất bại. Vui lòng thử lại.");
     } finally {
@@ -180,6 +183,50 @@ export function Quiz() {
           <h3 className="text-2xl font-bold text-emerald-900 mt-1">
             {submitResult.correct_count}/{submitResult.total_questions} câu đúng - {submitResult.score.toFixed(1)} điểm
           </h3>
+          <button
+            type="button"
+            onClick={() => setShowFullResults((prev) => !prev)}
+            className="mt-4 px-4 py-2 text-sm font-medium text-emerald-800 bg-emerald-100 hover:bg-emerald-200 rounded-lg transition-colors"
+          >
+            {showFullResults ? "Ẩn toàn bộ kết quả" : "Xem toàn bộ kết quả"}
+          </button>
+        </div>
+      )}
+
+      {submitResult && showFullResults && (
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-5 space-y-3">
+          <h4 className="text-lg font-bold text-gray-900">Tổng kết theo từng câu</h4>
+          {submitResult.results.map((result) => {
+            const questionItem = questions.find((item) => item.question_index === result.question_index);
+            const selectedOption =
+              result.selected_option_index !== null && questionItem
+                ? questionItem.options[result.selected_option_index]
+                : null;
+            const correctOption = questionItem?.options[result.correct_option_index] ?? "";
+
+            return (
+              <div
+                key={result.question_index}
+                className={`rounded-xl border p-4 ${result.is_correct ? "border-emerald-200 bg-emerald-50" : "border-red-200 bg-red-50"}`}
+              >
+                <p className="text-sm font-semibold text-gray-800">Câu {result.question_index + 1}</p>
+                <p className="text-sm text-gray-700 mt-1">
+                  Bạn chọn: {selectedOption ?? "Bỏ qua"}
+                </p>
+                <p className="text-sm text-gray-700 mt-1">Đáp án đúng: {correctOption}</p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setCurrentQuestion(result.question_index);
+                    setShowFullResults(false);
+                  }}
+                  className="mt-3 text-sm font-medium text-[#00A651] hover:text-[#008f45]"
+                >
+                  Quay lại câu này
+                </button>
+              </div>
+            );
+          })}
         </div>
       )}
 
@@ -194,8 +241,14 @@ export function Quiz() {
           </span>
           <div className="flex gap-1">
             {questions.map((_, idx) => (
-              <div 
+              <button
                 key={idx} 
+                type="button"
+                onClick={() => {
+                  if (submitResult) {
+                    setCurrentQuestion(idx);
+                  }
+                }}
                 className={`w-8 h-2 rounded-full ${idx === currentQuestion ? 'bg-[#00A651]' : idx < currentQuestion ? 'bg-green-200' : 'bg-gray-200'}`}
               />
             ))}
@@ -257,17 +310,28 @@ export function Quiz() {
               {currentQuestion < questions.length - 1 ? "Câu tiếp theo" : "Nộp bài"}
             </button>
           ) : (
-            <button 
-              onClick={() => {
-                setSubmitResult(null);
-                setAnswers({});
-                setCurrentQuestion(0);
-                setStartTime(Date.now());
-              }}
-              className="px-8 py-3 bg-[#00A651] text-white rounded-xl font-bold hover:bg-[#008f45] transition-colors flex items-center gap-2"
-            >
-              Làm lại
-            </button>
+            <>
+              <button
+                type="button"
+                onClick={() => setShowFullResults((prev) => !prev)}
+                className="px-8 py-3 bg-white text-[#00A651] border border-green-200 rounded-xl font-bold hover:bg-green-50 transition-colors"
+              >
+                {showFullResults ? "Ẩn kết quả" : "Xem toàn bộ kết quả"}
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setSubmitResult(null);
+                  setShowFullResults(false);
+                  setAnswers({});
+                  setCurrentQuestion(0);
+                  setStartTime(Date.now());
+                }}
+                className="px-8 py-3 bg-[#00A651] text-white rounded-xl font-bold hover:bg-[#008f45] transition-colors flex items-center gap-2"
+              >
+                Làm lại
+              </button>
+            </>
           )}
         </div>
       </div>

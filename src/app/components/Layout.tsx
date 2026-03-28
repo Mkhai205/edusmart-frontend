@@ -51,7 +51,6 @@ export function Layout({ children }: LayoutProps) {
 
   const navItems = [
     { name: "Tổng quan", path: "/dashboard", icon: LayoutDashboard },
-    { name: "Khóa học", path: "/courses", icon: BookOpen },
     { name: "Tài liệu", path: "/documents", icon: FileText },
     { name: "Trắc nghiệm", path: "/quiz", icon: HelpCircle },
     { name: "Thẻ ghi nhớ", path: "/flashcards", icon: Layers },
