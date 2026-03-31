@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
@@ -147,12 +148,16 @@ export function Quiz() {
   };
 
   return (
-    <div className="max-w-3xl mx-auto space-y-6">
-      <div className="flex justify-between items-end mb-8">
-        <div>
+    <div>
+      <div>
           <h1 className="text-3xl font-bold text-[#00A651]">Bài trắc nghiệm</h1>
-          <p className="text-gray-600 mt-2">Đánh giá kiến thức từ tài liệu bạn đã tạo quiz</p>
+          <p className="text-gray-600 mt-2">
+            Đánh giá kiến thức từ tài liệu bạn đã tạo quiz
+          </p>
         </div>
+
+      <div className="max-w-3xl mx-auto space-y-6">
+      <div className="flex justify-between items-end mb-8">
         <div className="flex items-center gap-2 bg-green-50 px-4 py-2 rounded-lg text-[#00A651] font-medium">
           <Clock className="w-5 h-5" />
           {submitResult ? `${submitResult.time_spent_seconds}s` : `${Math.floor((Date.now() - startTime) / 1000)}s`}
@@ -336,6 +341,7 @@ export function Quiz() {
         </div>
       </div>
       )}
+    </div>
     </div>
   );
 }

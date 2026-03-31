@@ -54,6 +54,70 @@ export interface LearningGoalDashboard {
     due_this_week_count: number;
 }
 
+export interface LearningGoalMilestone {
+    id?: string;
+    title?: string;
+    description?: string | null;
+    due_date?: string | null;
+    completed?: boolean;
+    progress?: number | null;
+    [key: string]: unknown;
+}
+
+export interface LearningGoalProgressLog {
+    id: string;
+    goal_id: string;
+    user_id: string;
+    previous_progress: number | null;
+    new_progress: number;
+    note: string | null;
+    created_at: string;
+}
+
+export type ReminderChannel = "in_app" | "email";
+export type ReminderEventType = "due_soon" | "overdue" | "digest";
+export type ReminderEventStatus = "pending" | "sent" | "failed";
+
+export interface ReminderFeedItem {
+    event_id: string;
+    goal_id: string | null;
+    channel: ReminderChannel;
+    event_type: ReminderEventType;
+    status: ReminderEventStatus;
+    scheduled_for: string;
+    sent_at: string | null;
+    payload: Record<string, unknown> | null;
+    created_at: string;
+}
+
+export interface ReminderPreference {
+    timezone: string;
+    email_digest_enabled: boolean;
+    digest_hour: number;
+    digest_minute: number;
+    due_soon_hours: number;
+    overdue_cooldown_hours: number;
+}
+
+export interface ReminderPreferenceUpdateRequest {
+    timezone?: string;
+    email_digest_enabled?: boolean;
+    digest_hour?: number;
+    digest_minute?: number;
+    due_soon_hours?: number;
+    overdue_cooldown_hours?: number;
+}
+
+export interface MilestoneSuggestionRequest {
+    title: string;
+    description?: string | null;
+    desired_count?: number;
+}
+
+export interface MilestoneSuggestionResponse {
+    milestones: LearningGoalMilestone[];
+}
+
 export interface QuizListItem {
     quiz_id: string;
     document_id: string;
@@ -199,13 +263,22 @@ export type GoalRecurrenceType = "daily" | "weekly" | "monthly";
 
 export interface LearningGoal {
     id: string;
+    user_id: string;
+    document_id: string | null;
     title: string;
     description: string | null;
     recurrence_type: GoalRecurrenceType;
+    period_start: string;
+    period_end: string;
     target_date: string;
     progress: number;
     status: "in_progress" | "completed" | "overdue" | "archived";
+    milestones: LearningGoalMilestone[] | null;
+    reminder_enabled: boolean;
+    last_reminded_at: string | null;
+    completed_at: string | null;
     created_at: string;
+    updated_at: string;
 }
 
 export interface LearningGoalCreateRequest {
@@ -214,7 +287,24 @@ export interface LearningGoalCreateRequest {
     document_id?: string;
     recurrence_type: GoalRecurrenceType;
     target_date: string;
+    milestones?: LearningGoalMilestone[];
     reminder_enabled?: boolean;
+}
+
+export interface LearningGoalUpdateRequest {
+    title?: string;
+    description?: string;
+    document_id?: string;
+    recurrence_type?: GoalRecurrenceType;
+    target_date?: string;
+    milestones?: LearningGoalMilestone[];
+    reminder_enabled?: boolean;
+    status?: LearningGoal["status"];
+}
+
+export interface LearningGoalProgressUpdateRequest {
+    progress: number;
+    note?: string;
 }
 
 export type SummaryMode = "full_map_reduce" | "page_range" | "keyword_hybrid";
