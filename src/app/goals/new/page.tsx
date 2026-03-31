@@ -25,7 +25,7 @@ export default function NewGoalPage() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState('');
   const [targetDate, setTargetDate] = useState('');
-  const [recurrence, setRecurrence] = useState<string>('once');
+  const [recurrence_type, setRecurrence_type] = useState<GoalRecurrenceType>('weekly');
   const [milestones, setMilestones] = useState<Milestone[]>([]);
   const [newMilestone, setNewMilestone] = useState('');
   const [newMilestoneNotes, setNewMilestoneNotes] = useState('');
@@ -70,7 +70,7 @@ export default function NewGoalPage() {
         title,
         description,
         target_date: targetDate,
-        recurrence,
+        recurrence_type,
       });
       router.push('/goals');
     } catch (err) {
