@@ -34,7 +34,7 @@ export function Login() {
           <div className="bg-[#00A651] p-3 rounded-xl shadow-sm">
             <BookOpen className="h-8 w-8 text-white" />
           </div>
-          <span className="font-bold text-3xl text-[#00A651]">EduGreen</span>
+          <span className="font-bold text-3xl text-[#00A651]">EduSmart</span>
         </div>
         <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
           Đăng nhập vào hệ thống

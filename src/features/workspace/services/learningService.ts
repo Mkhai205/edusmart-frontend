@@ -6,15 +6,25 @@ import type {
     FlashcardReviewResponse,
     FlashcardSetDetail,
     FlashcardSetListItem,
+    GoalRecurrenceType,
     LearningGoal,
     LearningGoalCreateRequest,
     LearningGoalDashboard,
+    LearningGoalProgressLog,
+    LearningGoalProgressUpdateRequest,
+    LearningGoalUpdateRequest,
+    MilestoneSuggestionRequest,
+    MilestoneSuggestionResponse,
     QuizDetail,
     QuizGenerateRequest,
     QuizQueuedResponse,
     QuizListItem,
     QuizSubmitAnswer,
     QuizSubmitResponse,
+    ReminderChannel,
+    ReminderFeedItem,
+    ReminderPreference,
+    ReminderPreferenceUpdateRequest,
 } from "@/features/workspace/types";
 
 function toQueryString(params: Record<string, string | number | undefined>): string {
@@ -27,6 +37,16 @@ function toQueryString(params: Record<string, string | number | undefined>): str
     });
 
     return searchParams.toString();
+}
+
+interface ListGoalsOptions {
+    limit?: number;
+    offset?: number;
+    status?: LearningGoal["status"];
+    recurrenceType?: GoalRecurrenceType;
+    documentId?: string;
+    dueFrom?: string;
+    dueTo?: string;
 }
 
 export async function getLearningGoalDashboard(): Promise<LearningGoalDashboard> {
@@ -125,14 +145,29 @@ export async function reviewFlashcard(
     });
 }
 
-export async function listLearningGoals(
-    limit = 8,
-    offset = 0,
-    documentId?: string,
-): Promise<LearningGoal[]> {
-    const query = toQueryString({ limit, offset, document_id: documentId });
+export async function listLearningGoals(options: ListGoalsOptions = {}): Promise<LearningGoal[]> {
+    const {
+        limit = 8,
+        offset = 0,
+        status,
+        recurrenceType,
+        documentId,
+        dueFrom,
+        dueTo,
+    } = options;
 
-    return apiRequest<LearningGoal[]>(`/learning/goals?${query}`, {
+    const query = toQueryString({
+        limit,
+        offset,
+        status,
+        recurrence_type: recurrenceType,
+        document_id: documentId,
+        due_from: dueFrom,
+        due_to: dueTo,
+    });
+    const suffix = query ? `?${query}` : "";
+
+    return apiRequest<LearningGoal[]>(`/learning/goals${suffix}`, {
         method: "GET",
         allowAuthRetry: true,
     });
@@ -140,6 +175,94 @@ export async function listLearningGoals(
 
 export async function createLearningGoal(payload: LearningGoalCreateRequest): Promise<LearningGoal> {
     return apiRequest<LearningGoal>("/learning/goals", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        allowAuthRetry: true,
+    });
+}
+
+export async function getLearningGoal(goalId: string): Promise<LearningGoal> {
+    return apiRequest<LearningGoal>(`/learning/goals/${goalId}`, {
+        method: "GET",
+        allowAuthRetry: true,
+    });
+}
+
+export async function updateLearningGoal(
+    goalId: string,
+    payload: LearningGoalUpdateRequest,
+): Promise<LearningGoal> {
+    return apiRequest<LearningGoal>(`/learning/goals/${goalId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        allowAuthRetry: true,
+    });
+}
+
+export async function deleteLearningGoal(goalId: string): Promise<void> {
+    await apiRequest(`/learning/goals/${goalId}`, {
+        method: "DELETE",
+        allowAuthRetry: true,
+    });
+}
+
+export async function updateLearningGoalProgress(
+    goalId: string,
+    payload: LearningGoalProgressUpdateRequest,
+): Promise<LearningGoal> {
+    return apiRequest<LearningGoal>(`/learning/goals/${goalId}/progress`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        allowAuthRetry: true,
+    });
+}
+
+export async function listLearningGoalProgressLogs(
+    goalId: string,
+    limit = 30,
+    offset = 0,
+): Promise<LearningGoalProgressLog[]> {
+    const query = toQueryString({ limit, offset });
+    return apiRequest<LearningGoalProgressLog[]>(`/learning/goals/${goalId}/progress?${query}`, {
+        method: "GET",
+        allowAuthRetry: true,
+    });
+}
+
+export async function listReminderFeed(
+    limit = 20,
+    offset = 0,
+    channel?: ReminderChannel,
+): Promise<ReminderFeedItem[]> {
+    const query = toQueryString({ limit, offset, channel });
+    const suffix = query ? `?${query}` : "";
+    return apiRequest<ReminderFeedItem[]>(`/learning/goals/reminders/feed${suffix}`, {
+        method: "GET",
+        allowAuthRetry: true,
+    });
+}
+
+export async function getReminderPreferences(): Promise<ReminderPreference> {
+    return apiRequest<ReminderPreference>("/learning/goals/reminders/preferences", {
+        method: "GET",
+        allowAuthRetry: true,
+    });
+}
+
+export async function updateReminderPreferences(
+    payload: ReminderPreferenceUpdateRequest,
+): Promise<ReminderPreference> {
+    return apiRequest<ReminderPreference>("/learning/goals/reminders/preferences", {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        allowAuthRetry: true,
+    });
+}
+
+export async function suggestGoalMilestones(
+    payload: MilestoneSuggestionRequest,
+): Promise<MilestoneSuggestionResponse> {
+    return apiRequest<MilestoneSuggestionResponse>("/learning/goals/milestones/suggestions", {
         method: "POST",
         body: JSON.stringify(payload),
         allowAuthRetry: true,

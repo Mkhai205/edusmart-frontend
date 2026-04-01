@@ -1,17 +1,15 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { 
   BookOpen, 
-  LayoutDashboard, 
-  FileText, 
-  HelpCircle, 
-  Layers, 
-  BarChart2, 
   LogOut,
-  User
+  User,
+  Bell,
+  Search,
+  ChevronDown
 } from "lucide-react";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
@@ -21,6 +19,7 @@ interface LayoutProps {
 }
 
 export function Layout({ children }: LayoutProps) {
+  const [showUserMenu, setShowUserMenu] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -50,11 +49,12 @@ export function Layout({ children }: LayoutProps) {
   };
 
   const navItems = [
-    { name: "Tổng quan", path: "/dashboard", icon: LayoutDashboard },
-    { name: "Tài liệu", path: "/documents", icon: FileText },
-    { name: "Trắc nghiệm", path: "/quiz", icon: HelpCircle },
-    { name: "Thẻ ghi nhớ", path: "/flashcards", icon: Layers },
-    { name: "Thống kê", path: "/statistics", icon: BarChart2 },
+    { name: "Tổng quan", path: "/dashboard" },
+    { name: "Tài liệu", path: "/documents" },
+    { name: "Trắc nghiệm", path: "/quiz" },
+    { name: "Thẻ ghi nhớ", path: "/flashcards" },
+    { name: "Mục tiêu", path: "/goals" },
+    { name: "Thống kê", path: "/statistics" },
   ];
 
   return (
@@ -62,64 +62,112 @@ export function Layout({ children }: LayoutProps) {
       {/* Top Navigation Bar */}
       <header className="bg-white shadow-sm border-b border-green-100 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            {/* Logo */}
-            <div className="flex items-center">
-              <Link href="/dashboard" className="flex items-center gap-2">
-                <div className="bg-[#00A651] p-2 rounded-lg">
-                  <BookOpen className="h-6 w-6 text-white" />
+          <div className="flex flex-col gap-2 py-1.5 lg:flex-row lg:items-center lg:justify-between lg:gap-6">
+            <div className="flex items-center gap-6 min-w-0">
+              {/* Logo */}
+              <Link href="/dashboard" className="flex items-center gap-1.5 whitespace-nowrap">
+                <div className="bg-[#00A651] p-1 rounded-lg">
+                  <BookOpen className="h-4 w-4 text-white" />
                 </div>
-                <span className="font-bold text-xl text-[#00A651] hidden sm:block">EduGreen</span>
+                <span className="font-semibold text-base text-[#00A651] leading-none">EduSmart</span>
               </Link>
+
+              {/* Main Navigation */}
+              <nav className="hidden md:flex items-center space-x-2 lg:space-x-3 flex-nowrap">
+                {navItems.map((item) => {
+                  const isActive = pathname.startsWith(item.path);
+                  return (
+                    <Link
+                      key={item.name}
+                      href={item.path}
+                      className={`px-1.5 lg:px-2 pt-2 pb-[6px] text-sm font-medium border-b-2 transition-colors whitespace-nowrap ${
+                        isActive
+                          ? "text-[#00A651] border-[#00A651]"
+                          : "text-gray-600 border-transparent hover:text-[#00A651]"
+                      }`}
+                    >
+                      {item.name}
+                    </Link>
+                  );
+                })}
+              </nav>
             </div>
 
-            {/* Main Navigation */}
-            <nav className="hidden md:flex space-x-1 lg:space-x-4 items-center flex-1 justify-center">
-              {navItems.map((item) => {
-                const isActive = pathname.startsWith(item.path);
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.path}
-                    className={`flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      isActive
-                        ? "bg-green-50 text-[#00A651]"
-                        : "text-gray-600 hover:bg-green-50 hover:text-[#00A651]"
-                    }`}
-                  >
-                    <Icon className="h-4 w-4 mr-2" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
-
-            {/* User Menu */}
-            <div className="flex items-center gap-4">
-              <div className="flex items-center gap-2 cursor-pointer hover:bg-gray-50 p-2 rounded-full transition-colors">
-                <div className="h-8 w-8 rounded-full bg-green-100 flex items-center justify-center text-[#00A651]">
-                  <User className="h-5 w-5" />
-                </div>
-                <span className="text-sm font-medium text-gray-700 hidden sm:block">
-                  {user?.full_name ?? user?.email ?? "Học viên"}
-                </span>
+            {/* Search + User */}
+            <div className="flex items-center gap-2.5 lg:gap-4">
+              <div className="hidden lg:flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 h-9 flex-1 max-w-xs">
+                <Search className="h-4 w-4 text-gray-500" />
+                <input
+                  type="text"
+                  placeholder="Tìm tài nguyên..."
+                  className="bg-transparent border-none focus:outline-none text-sm text-gray-600 ml-2 w-full"
+                />
               </div>
               <button
                 type="button"
-                onClick={() => void handleSignOut()}
-                className="text-gray-400 hover:text-red-500 transition-colors"
-                title="Đăng xuất"
+                className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#00A651] hover:border-[#00A651] transition-colors"
+                aria-label="Thông báo"
               >
-                <LogOut className="h-5 w-5" />
+                <Bell className="h-5 w-5" />
               </button>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center text-[#00A651] hover:bg-green-200 transition-colors relative"
+                  aria-label="Thông tin người dùng"
+                  title="Thông tin người dùng"
+                >
+                  <User className="h-4 w-4" aria-hidden="true" />
+                </button>
+                
+                {/* User Info Dropdown */}
+                {showUserMenu && (
+                  <div className="absolute right-0 mt-2 w-64 bg-white rounded-lg shadow-lg border border-gray-200 z-50 py-3">
+                    <div className="px-4 py-2 border-b border-gray-100">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 rounded-full bg-green-100 flex items-center justify-center text-[#00A651]">
+                          <User className="h-5 w-5" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-semibold text-gray-900 truncate">
+                            {user?.full_name || "Người dùng"}
+                          </p>
+                          <p className="text-xs text-gray-500 truncate">
+                            {user?.email || "email@example.com"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="px-4 py-2 space-y-1 text-sm">
+                      <div className="py-2 border-b border-gray-100">
+                        <p className="text-gray-600">
+                          <span className="text-gray-400">ID: </span>
+                          <span className="font-medium text-gray-900">{user?.id || "—"}</span>
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => {
+                          void handleSignOut();
+                          setShowUserMenu(false);
+                        }}
+                        className="w-full px-3 py-2 text-left text-red-600 hover:bg-red-50 rounded transition-colors flex items-center gap-2"
+                      >
+                        <LogOut className="h-4 w-4" />
+                        <span>Đăng xuất</span>
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-7xl mx-auto p-4 sm:p-6 lg:p-8">
+      <main className="flex-1 w-full max-w-7xl mx-auto px-4 pb-6 pt-3 sm:px-6 sm:pt-4 sm:pb-8 lg:px-8 lg:pt-5">
         {children}
       </main>
     </div>
