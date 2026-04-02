@@ -2,11 +2,14 @@ import { apiRequest } from "@/libs/apiClient";
 import type {
     DocumentDetail,
     DocumentDownloadResponse,
+    DocumentExtractionStatusResponse,
     DocumentListItem,
     DocumentSummaryQueuedResponse,
     DocumentSummaryRequest,
     DocumentSummaryStatus,
     DocumentUploadResponse,
+    SemanticSearchRequest,
+    SemanticSearchResponse,
 } from "@/features/workspace/types";
 
 function toQueryString(params: Record<string, string | number | undefined>): string {
@@ -56,6 +59,35 @@ export async function getDocumentDownloadUrl(
 export async function getDocumentDetail(documentId: string): Promise<DocumentDetail> {
     return apiRequest<DocumentDetail>(`/documents/${documentId}/detail`, {
         method: "GET",
+        allowAuthRetry: true,
+    });
+}
+
+export async function getDocumentExtractionStatus(
+    documentId: string,
+): Promise<DocumentExtractionStatusResponse> {
+    return apiRequest<DocumentExtractionStatusResponse>(`/documents/${documentId}`, {
+        method: "GET",
+        allowAuthRetry: true,
+    });
+}
+
+export async function retryDocumentVectorization(
+    documentId: string,
+): Promise<DocumentExtractionStatusResponse> {
+    return apiRequest<DocumentExtractionStatusResponse>(`/documents/${documentId}/vectorize`, {
+        method: "POST",
+        allowAuthRetry: true,
+    });
+}
+
+export async function semanticSearchDocument(
+    documentId: string,
+    payload: SemanticSearchRequest,
+): Promise<SemanticSearchResponse> {
+    return apiRequest<SemanticSearchResponse>(`/documents/${documentId}/search`, {
+        method: "POST",
+        body: JSON.stringify(payload),
         allowAuthRetry: true,
     });
 }

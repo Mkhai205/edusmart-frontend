@@ -46,6 +46,36 @@ export interface DocumentDetail {
     download_url: string;
 }
 
+export interface DocumentExtractionStatusResponse {
+    document_id: string;
+    extraction_status: ExtractionStatus;
+    total_pages: number | null;
+    extraction_error: string | null;
+    extracted_at: string | null;
+}
+
+export interface SemanticSearchRequest {
+    query: string;
+    limit?: number;
+    min_similarity?: number;
+}
+
+export interface SemanticSearchChunkResult {
+    chunk_id: string;
+    page_number: number;
+    chunk_index: number;
+    text_content: string;
+    bbox: number[] | null;
+    element_type: string;
+    similarity: number;
+}
+
+export interface SemanticSearchResponse {
+    document_id: string;
+    query: string;
+    results: SemanticSearchChunkResult[];
+}
+
 export interface LearningGoalDashboard {
     in_progress_count: number;
     completed_count: number;
