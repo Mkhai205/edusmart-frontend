@@ -7,9 +7,7 @@ import {
   BookOpen, 
   LogOut,
   User,
-  Bell,
-  Search,
-  ChevronDown
+  Bell
 } from "lucide-react";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
@@ -93,16 +91,8 @@ export function Layout({ children }: LayoutProps) {
               </nav>
             </div>
 
-            {/* Search + User */}
+            {/* User actions */}
             <div className="flex items-center gap-2.5 lg:gap-4">
-              <div className="hidden lg:flex items-center bg-gray-50 border border-gray-200 rounded-lg px-2 py-1 h-9 flex-1 max-w-xs">
-                <Search className="h-4 w-4 text-gray-500" />
-                <input
-                  type="text"
-                  placeholder="Tìm tài nguyên..."
-                  className="bg-transparent border-none focus:outline-none text-sm text-gray-600 ml-2 w-full"
-                />
-              </div>
               <button
                 type="button"
                 className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#00A651] hover:border-[#00A651] transition-colors"

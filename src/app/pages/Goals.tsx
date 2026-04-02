@@ -2,6 +2,7 @@
 
 import React, { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
+import { Search } from "lucide-react";
 import { useAuthStore } from "@/features/auth/store/authStore";
 import {
   listLearningGoals,
@@ -445,9 +446,25 @@ export function Goals() {
       )}
 
       {/* Header */}
-      <section className="pt-0 pb-3">
-        <h1 className="text-3xl md:text-4xl font-bold text-[#00A651]">Mục tiêu học tập</h1>
-        <p className="text-gray-600 mt-1">Hiện thực hoá ước mơ của bạn với những mục tiêu cụ thể.</p>
+      <section className="pt-0 pb-3 border-b border-green-100">
+        <div className="flex flex-wrap items-end justify-between gap-3">
+          <div>
+            <h1 className="text-3xl font-bold text-[#00A651]">Mục tiêu học tập</h1>
+            <p className="mt-1 text-sm text-slate-600">Hiện thực hoá ước mơ của bạn với những mục tiêu cụ thể.</p>
+          </div>
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-slate-400">
+              <Search className="h-4 w-4" />
+            <input
+              type="text"
+              value={goalSearchKeyword}
+              onChange={(e) => setGoalSearchKeyword(e.target.value)}
+              placeholder="Nhập tên hoặc mô tả mục tiêu"
+              className="w-[420px] max-w-[78vw] bg-transparent text-sm text-slate-700 outline-none"
+            />
+            </label>
+          </div>
+        </div>
       </section>
 
       {/* Stats Section */}
@@ -501,19 +518,15 @@ export function Goals() {
           </div>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-5">
-            <div className="lg:col-span-4 space-y-3">
-              <div className="rounded-lg border border-gray-200 bg-white p-3">
-                <label className="text-xs font-semibold uppercase tracking-wide text-gray-600">Tìm kiếm mục tiêu</label>
-                <input
-                  type="text"
-                  value={goalSearchKeyword}
-                  onChange={(e) => setGoalSearchKeyword(e.target.value)}
-                  placeholder="Nhập tên hoặc mô tả mục tiêu"
-                  className="mt-2 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:border-[#00A651]"
-                />
-              </div>
+            <div className="lg:col-span-4">
+              <div className="rounded-xl border border-gray-200 bg-white p-3">
+                <div className="mb-3 flex items-center justify-between">
+                  <p className="text-sm font-semibold text-gray-900">Danh sách mục tiêu</p>
+                  <p className="text-xs text-gray-500">{filteredGoals.length} mục tiêu</p>
+                </div>
 
-              {filteredGoals.map((goal) => {
+                <div className="max-h-[440px] space-y-3 overflow-y-auto pr-1">
+                  {filteredGoals.map((goal) => {
                 const { total, completed, progress } = getMilestoneStats(goal);
                 const meta = statusConfig[goal.status];
                 const isSelected = selectedGoal?.id === goal.id;
@@ -524,58 +537,60 @@ export function Goals() {
                   : "bg-black";
                 const categoryLabel = goal.document_id ? "DỰA TRÊN TÀI LIỆU" : "MỤC TIÊU CHUNG";
 
-                return (
-                  <button
-                    key={goal.id}
-                    draggable
-                    onClick={() => {
-                      setSelectedGoalId(goal.id);
-                      setIsCreatingGoal(false);
-                      setIsEditingGoal(false);
-                    }}
-                    onMouseDown={() => setIsCreatingGoal(false)}
-                    onDragStart={() => setDraggingGoalId(goal.id)}
-                    onDragOver={(event) => event.preventDefault()}
-                    onDrop={() => handleDropGoal(goal.id)}
-                    onDragEnd={() => setDraggingGoalId(null)}
-                    className={`relative w-full rounded-xl border p-4 text-left transition ${
-                      isSelected
-                        ? "border-gray-200 bg-white shadow-sm"
-                        : "border-gray-200 bg-white hover:border-gray-300"
-                    } ${draggingGoalId === goal.id ? "opacity-60" : ""}`}
-                  >
-                    {isSelected && (
-                      <span className="absolute left-0 top-0 h-full w-1.5 rounded-l-xl bg-[#007a38]" aria-hidden="true" />
-                    )}
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-[11px] font-semibold tracking-wide uppercase ${isSelected ? "text-[#00A651]" : "text-black"}`}>{categoryLabel}</p>
-                      <div className="text-right">
-                        <p className={`text-sm font-bold ${isSelected ? "text-gray-700" : "text-black"}`}>{progress}%</p>
-                        <p className={`text-[10px] uppercase ${isSelected ? "text-gray-500" : "text-black"}`}>{completed} of {Math.max(total, 1)} tasks</p>
+                  return (
+                    <button
+                      key={goal.id}
+                      draggable
+                      onClick={() => {
+                        setSelectedGoalId(goal.id);
+                        setIsCreatingGoal(false);
+                        setIsEditingGoal(false);
+                      }}
+                      onMouseDown={() => setIsCreatingGoal(false)}
+                      onDragStart={() => setDraggingGoalId(goal.id)}
+                      onDragOver={(event) => event.preventDefault()}
+                      onDrop={() => handleDropGoal(goal.id)}
+                      onDragEnd={() => setDraggingGoalId(null)}
+                      className={`relative w-full rounded-xl border p-4 text-left transition ${
+                        isSelected
+                          ? "border-gray-200 bg-white shadow-sm"
+                          : "border-gray-200 bg-white hover:border-gray-300"
+                      } ${draggingGoalId === goal.id ? "opacity-60" : ""}`}
+                    >
+                      {isSelected && (
+                        <span className="absolute left-0 top-0 h-full w-1.5 rounded-l-xl bg-[#007a38]" aria-hidden="true" />
+                      )}
+                      <div className="flex items-start justify-between gap-2">
+                        <p className={`text-[11px] font-semibold tracking-wide uppercase ${isSelected ? "text-[#00A651]" : "text-black"}`}>{categoryLabel}</p>
+                        <div className="text-right">
+                          <p className={`text-sm font-bold ${isSelected ? "text-gray-700" : "text-black"}`}>{progress}%</p>
+                          <p className={`text-[10px] uppercase ${isSelected ? "text-gray-500" : "text-black"}`}>{completed} of {Math.max(total, 1)} tasks</p>
+                        </div>
                       </div>
-                    </div>
-                    <h3 className={`text-lg leading-snug font-semibold mt-1 line-clamp-2 ${isSelected ? "text-gray-900" : "text-black"}`}>{goal.title}</h3>
-                    <div className="mt-3">
-                      <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
-                        <div
-                          className={`h-2 rounded-full transition-all ${progressBarClass}`}
-                          style={{ width: `${progress}%` }}
-                        />
+                      <h3 className={`text-lg leading-snug font-semibold mt-1 line-clamp-2 ${isSelected ? "text-gray-900" : "text-black"}`}>{goal.title}</h3>
+                      <div className="mt-3">
+                        <div className="h-2 rounded-full bg-gray-200 overflow-hidden">
+                          <div
+                            className={`h-2 rounded-full transition-all ${progressBarClass}`}
+                            style={{ width: `${progress}%` }}
+                          />
+                        </div>
                       </div>
-                    </div>
-                    <div className="mt-3 flex items-center justify-between gap-2">
-                      <p className={`text-[11px] ${isSelected ? "text-gray-500" : "text-black"}`}>{goal.target_date ? formatDate(goal.target_date) : "Không có hạn"}</p>
-                      <p className={`text-[11px] font-semibold ${isSelected ? meta.text : "text-black"}`}>{completed}/{total} cột mốc xong</p>
-                    </div>
-                  </button>
-                );
-              })}
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <p className={`text-[11px] ${isSelected ? "text-gray-500" : "text-black"}`}>{goal.target_date ? formatDate(goal.target_date) : "Không có hạn"}</p>
+                        <p className={`text-[11px] font-semibold ${isSelected ? meta.text : "text-black"}`}>{completed}/{total} cột mốc xong</p>
+                      </div>
+                    </button>
+                  );
+                })}
 
-              {!filteredGoals.length && (
-                <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500">
-                  Không tìm thấy mục tiêu phù hợp.
+                  {!filteredGoals.length && (
+                    <div className="rounded-lg border border-dashed border-gray-300 p-4 text-sm text-gray-500">
+                      Không tìm thấy mục tiêu phù hợp.
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
 
             <div className="lg:col-span-8 space-y-4">

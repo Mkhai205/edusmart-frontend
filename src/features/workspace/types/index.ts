@@ -200,20 +200,26 @@ export interface QuizGenerateRequest {
 
 export interface FlashcardSetListItem {
     set_id: string;
-    document_id: string;
+    document_id: string | null;
     title: string;
+    algorithm?: string | null;
     generation_status: "pending" | "processing" | "completed" | "failed";
+    learning_status: "chua_hoc" | "dang_hoc" | "da_hoc_xong";
+    studied_cards: number;
+    due_cards: number;
     card_count: number;
+    completed_at?: string | null;
     created_at: string;
 }
 
 export interface FlashcardSetDetail {
     set_id: string;
-    document_id: string;
+    document_id: string | null;
     title: string;
     generation_status: "pending" | "processing" | "completed" | "failed";
     generation_error: string | null;
     card_count: number;
+    options?: Record<string, unknown> | null;
     created_at: string;
 }
 
@@ -241,6 +247,22 @@ export interface FlashcardReviewResponse {
     next_review_at: string;
 }
 
+export interface FlashcardReviewTodayItem {
+    card_id: string;
+    set_id: string;
+    set_title: string;
+    card_type: "term_definition" | "qa" | "cloze";
+    front: string;
+    back: string;
+    image_url: string | null;
+    image_keyword: string | null;
+    ease_factor: number | null;
+    interval_days: number | null;
+    repetitions: number;
+    next_review_at: string;
+    last_rating: "hard" | "medium" | "easy" | null;
+}
+
 export interface FlashcardQueuedResponse {
     set_id: string;
     document_id: string;
@@ -257,6 +279,35 @@ export interface FlashcardGenerateRequest {
     start_page?: number;
     end_page?: number;
     include_images?: boolean;
+}
+
+export interface ManualFlashcardSetCreateRequest {
+    document_id?: string | null;
+    title: string;
+    description?: string | null;
+    category?: string | null;
+}
+
+export interface ManualFlashcardSetUpdateRequest {
+    title?: string;
+    description?: string | null;
+    category?: string | null;
+}
+
+export interface ManualFlashcardCardCreateRequest {
+    card_type?: "term_definition" | "qa" | "cloze";
+    front: string;
+    back: string;
+    image_url?: string | null;
+    image_keyword?: string | null;
+}
+
+export interface ManualFlashcardCardUpdateRequest {
+    card_type?: "term_definition" | "qa" | "cloze";
+    front?: string;
+    back?: string;
+    image_url?: string | null;
+    image_keyword?: string | null;
 }
 
 export type GoalRecurrenceType = "daily" | "weekly" | "monthly";

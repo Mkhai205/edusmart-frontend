@@ -37,7 +37,7 @@ export function Statistics() {
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex justify-between items-end border-b border-green-100 pb-3">
         <div>
           <h1 className="text-3xl font-bold text-[#00A651]">Báo cáo & Thống kê</h1>
           <p className="text-gray-600 mt-2">Theo dõi tiến độ và hiệu suất học tập của bạn.</p>

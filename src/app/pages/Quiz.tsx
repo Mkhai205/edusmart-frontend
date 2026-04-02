@@ -149,7 +149,7 @@ export function Quiz() {
 
   return (
     <div>
-      <div>
+      <div className="border-b border-green-100 pb-3">
           <h1 className="text-3xl font-bold text-[#00A651]">Bài trắc nghiệm</h1>
           <p className="text-gray-600 mt-2">
             Đánh giá kiến thức từ tài liệu bạn đã tạo quiz

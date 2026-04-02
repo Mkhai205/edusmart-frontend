@@ -4,8 +4,13 @@ import type {
     FlashcardGenerateRequest,
     FlashcardQueuedResponse,
     FlashcardReviewResponse,
+    FlashcardReviewTodayItem,
     FlashcardSetDetail,
     FlashcardSetListItem,
+    ManualFlashcardCardCreateRequest,
+    ManualFlashcardCardUpdateRequest,
+    ManualFlashcardSetCreateRequest,
+    ManualFlashcardSetUpdateRequest,
     GoalRecurrenceType,
     LearningGoal,
     LearningGoalCreateRequest,
@@ -141,6 +146,75 @@ export async function reviewFlashcard(
     return apiRequest<FlashcardReviewResponse>(`/learning/flashcards/cards/${cardId}/review`, {
         method: "POST",
         body: JSON.stringify({ rating }),
+        allowAuthRetry: true,
+    });
+}
+
+export async function listDueFlashcardsToday(
+    limit = 20,
+    offset = 0,
+    setId?: string,
+): Promise<FlashcardReviewTodayItem[]> {
+    const query = toQueryString({ limit, offset, set_id: setId });
+    return apiRequest<FlashcardReviewTodayItem[]>(`/learning/flashcards/review/today?${query}`, {
+        method: "GET",
+        allowAuthRetry: true,
+    });
+}
+
+export async function createManualFlashcardSet(
+    payload: ManualFlashcardSetCreateRequest,
+): Promise<FlashcardSetListItem> {
+    return apiRequest<FlashcardSetListItem>("/learning/flashcards/manual/sets", {
+        method: "POST",
+        body: JSON.stringify(payload),
+        allowAuthRetry: true,
+    });
+}
+
+export async function updateManualFlashcardSet(
+    setId: string,
+    payload: ManualFlashcardSetUpdateRequest,
+): Promise<FlashcardSetListItem> {
+    return apiRequest<FlashcardSetListItem>(`/learning/flashcards/manual/sets/${setId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        allowAuthRetry: true,
+    });
+}
+
+export async function deleteManualFlashcardSet(setId: string): Promise<void> {
+    await apiRequest(`/learning/flashcards/manual/sets/${setId}`, {
+        method: "DELETE",
+        allowAuthRetry: true,
+    });
+}
+
+export async function createManualFlashcardCard(
+    setId: string,
+    payload: ManualFlashcardCardCreateRequest,
+): Promise<FlashcardCard> {
+    return apiRequest<FlashcardCard>(`/learning/flashcards/manual/sets/${setId}/cards`, {
+        method: "POST",
+        body: JSON.stringify(payload),
+        allowAuthRetry: true,
+    });
+}
+
+export async function updateManualFlashcardCard(
+    cardId: string,
+    payload: ManualFlashcardCardUpdateRequest,
+): Promise<FlashcardCard> {
+    return apiRequest<FlashcardCard>(`/learning/flashcards/manual/cards/${cardId}`, {
+        method: "PATCH",
+        body: JSON.stringify(payload),
+        allowAuthRetry: true,
+    });
+}
+
+export async function deleteManualFlashcardCard(cardId: string): Promise<void> {
+    await apiRequest(`/learning/flashcards/manual/cards/${cardId}`, {
+        method: "DELETE",
         allowAuthRetry: true,
     });
 }
