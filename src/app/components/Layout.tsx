@@ -11,6 +11,16 @@ import {
 } from "lucide-react";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
+import {
+  getReminderPreferences,
+  listReminderFeed,
+  updateReminderPreferences,
+} from "@/features/workspace/services/learningService";
+import type {
+  ReminderChannel,
+  ReminderFeedItem,
+  ReminderPreference,
+} from "@/features/workspace/types";
 
 interface LayoutProps {
   children: React.ReactNode;
@@ -18,6 +28,13 @@ interface LayoutProps {
 
 export function Layout({ children }: LayoutProps) {
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [showNotificationMenu, setShowNotificationMenu] = useState(false);
+  const [showReminderSettingsModal, setShowReminderSettingsModal] = useState(false);
+  const [reminderFeed, setReminderFeed] = useState<ReminderFeedItem[]>([]);
+  const [reminderChannelFilter, setReminderChannelFilter] = useState<"all" | ReminderChannel>("all");
+  const [reminderPreferences, setReminderPreferences] = useState<ReminderPreference | null>(null);
+  const [loadingReminders, setLoadingReminders] = useState(false);
+  const [savingReminderSettings, setSavingReminderSettings] = useState(false);
   const pathname = usePathname();
   const router = useRouter();
   const user = useAuthStore((state) => state.user);
@@ -44,6 +61,61 @@ export function Layout({ children }: LayoutProps) {
   const handleSignOut = async () => {
     await signOut();
     router.replace("/login");
+  };
+
+  const loadReminderData = async () => {
+    try {
+      setLoadingReminders(true);
+      const [feed, preferences] = await Promise.all([
+        listReminderFeed(12, 0, reminderChannelFilter === "all" ? undefined : reminderChannelFilter),
+        getReminderPreferences(),
+      ]);
+      setReminderFeed(feed);
+      setReminderPreferences(preferences);
+    } finally {
+      setLoadingReminders(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!initialized || status !== "authenticated") {
+      return;
+    }
+    if (!showNotificationMenu) {
+      return;
+    }
+
+    void loadReminderData();
+  }, [initialized, status, showNotificationMenu, reminderChannelFilter]);
+
+  const handleSaveReminderSettings = async () => {
+    if (!reminderPreferences) {
+      return;
+    }
+
+    try {
+      setSavingReminderSettings(true);
+      const updated = await updateReminderPreferences({
+        timezone: reminderPreferences.timezone,
+        email_digest_enabled: reminderPreferences.email_digest_enabled,
+        digest_hour: reminderPreferences.digest_hour,
+        digest_minute: reminderPreferences.digest_minute,
+        due_soon_hours: reminderPreferences.due_soon_hours,
+        overdue_cooldown_hours: reminderPreferences.overdue_cooldown_hours,
+      });
+      setReminderPreferences(updated);
+      setShowReminderSettingsModal(false);
+    } finally {
+      setSavingReminderSettings(false);
+    }
+  };
+
+  const formatDateTime = (value: string) => {
+    try {
+      return new Date(value).toLocaleString("vi-VN");
+    } catch {
+      return value;
+    }
   };
 
   const navItems = [
@@ -93,17 +165,69 @@ export function Layout({ children }: LayoutProps) {
 
             {/* User actions */}
             <div className="flex items-center gap-2.5 lg:gap-4">
-              <button
-                type="button"
-                className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#00A651] hover:border-[#00A651] transition-colors"
-                aria-label="Thông báo"
-              >
-                <Bell className="h-5 w-5" />
-              </button>
               <div className="relative">
                 <button
                   type="button"
-                  onClick={() => setShowUserMenu(!showUserMenu)}
+                  onClick={() => {
+                    setShowNotificationMenu((prev) => !prev);
+                    setShowUserMenu(false);
+                  }}
+                  className="h-8 w-8 rounded-xl border border-gray-200 flex items-center justify-center text-gray-500 hover:text-[#00A651] hover:border-[#00A651] transition-colors"
+                  aria-label="Thông báo"
+                >
+                  <Bell className="h-5 w-5" />
+                </button>
+
+                {showNotificationMenu && (
+                  <div className="absolute right-0 mt-2 w-[360px] max-w-[85vw] rounded-lg border border-gray-200 bg-white py-3 shadow-lg z-50">
+                    <div className="flex items-center justify-between px-4 pb-2 border-b border-gray-100">
+                      <p className="text-sm font-semibold text-gray-900">Lịch sử nhắc nhở</p>
+                      <div className="flex items-center gap-2">
+                        <select
+                          value={reminderChannelFilter}
+                          onChange={(event) => setReminderChannelFilter(event.target.value as "all" | ReminderChannel)}
+                          className="rounded-md border border-gray-300 px-2 py-1 text-xs"
+                        >
+                          <option value="all">Tất cả</option>
+                          <option value="in_app">In-app</option>
+                          <option value="email">Email</option>
+                        </select>
+                        <button
+                          type="button"
+                          onClick={() => setShowReminderSettingsModal(true)}
+                          className="rounded-md border border-green-300 px-2 py-1 text-xs font-semibold text-[#00A651] hover:bg-green-50"
+                        >
+                          Cài đặt nhắc hẹn
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto px-4 pt-3 space-y-2">
+                      {loadingReminders ? (
+                        <p className="text-sm text-gray-500">Đang tải nhắc nhở...</p>
+                      ) : !reminderFeed.length ? (
+                        <p className="text-sm text-gray-500">Chưa có nhắc nhở nào.</p>
+                      ) : (
+                        reminderFeed.map((item) => (
+                          <div key={item.event_id} className="rounded-lg border border-gray-200 bg-gray-50 px-3 py-2">
+                            <p className="text-xs font-semibold text-gray-700">
+                              {item.event_type} • {item.channel} • {item.status}
+                            </p>
+                            <p className="text-xs text-gray-500">Lên lịch: {formatDateTime(item.scheduled_for)}</p>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowUserMenu(!showUserMenu);
+                    setShowNotificationMenu(false);
+                  }}
                   className="h-9 w-9 rounded-full bg-green-100 flex items-center justify-center text-[#00A651] hover:bg-green-200 transition-colors relative"
                   aria-label="Thông tin người dùng"
                   title="Thông tin người dùng"
@@ -160,6 +284,117 @@ export function Layout({ children }: LayoutProps) {
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 pb-6 pt-3 sm:px-6 sm:pt-4 sm:pb-8 lg:px-8 lg:pt-5">
         {children}
       </main>
+
+      {showReminderSettingsModal && reminderPreferences && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center bg-black/30 p-4">
+          <div className="w-full max-w-xl rounded-xl border border-gray-200 bg-white p-5 shadow-xl">
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="text-lg font-semibold text-gray-900">Cài đặt nhắc hẹn</h3>
+              <button
+                type="button"
+                onClick={() => setShowReminderSettingsModal(false)}
+                className="rounded-md border border-gray-300 px-2 py-1 text-xs text-gray-600 hover:bg-gray-50"
+              >
+                Đóng
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+              <div>
+                <label className="text-xs font-medium text-gray-700">Múi giờ</label>
+                <input
+                  value={reminderPreferences.timezone}
+                  onChange={(e) => setReminderPreferences((prev) => (prev ? { ...prev, timezone: e.target.value } : prev))}
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div className="flex items-end">
+                <label className="inline-flex items-center gap-2 text-sm text-gray-700">
+                  <input
+                    type="checkbox"
+                    checked={reminderPreferences.email_digest_enabled}
+                    onChange={(e) =>
+                      setReminderPreferences((prev) =>
+                        prev ? { ...prev, email_digest_enabled: e.target.checked } : prev,
+                      )
+                    }
+                  />
+                  Bật email tổng hợp
+                </label>
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700">Giờ gửi digest</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={23}
+                  value={reminderPreferences.digest_hour}
+                  onChange={(e) =>
+                    setReminderPreferences((prev) =>
+                      prev ? { ...prev, digest_hour: Math.max(0, Math.min(23, Number(e.target.value) || 0)) } : prev,
+                    )
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700">Phút gửi digest</label>
+                <input
+                  type="number"
+                  min={0}
+                  max={59}
+                  value={reminderPreferences.digest_minute}
+                  onChange={(e) =>
+                    setReminderPreferences((prev) =>
+                      prev ? { ...prev, digest_minute: Math.max(0, Math.min(59, Number(e.target.value) || 0)) } : prev,
+                    )
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700">Nhắc trước hạn (giờ)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={reminderPreferences.due_soon_hours}
+                  onChange={(e) =>
+                    setReminderPreferences((prev) =>
+                      prev ? { ...prev, due_soon_hours: Math.max(1, Number(e.target.value) || 1) } : prev,
+                    )
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+              <div>
+                <label className="text-xs font-medium text-gray-700">Cooldown quá hạn (giờ)</label>
+                <input
+                  type="number"
+                  min={1}
+                  value={reminderPreferences.overdue_cooldown_hours}
+                  onChange={(e) =>
+                    setReminderPreferences((prev) =>
+                      prev ? { ...prev, overdue_cooldown_hours: Math.max(1, Number(e.target.value) || 1) } : prev,
+                    )
+                  }
+                  className="mt-1 w-full rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                />
+              </div>
+            </div>
+
+            <div className="mt-5 flex justify-end">
+              <button
+                type="button"
+                onClick={() => void handleSaveReminderSettings()}
+                disabled={savingReminderSettings}
+                className="rounded-lg bg-[#00A651] px-4 py-2 text-sm font-semibold text-white hover:bg-[#007a38] disabled:opacity-50"
+              >
+                {savingReminderSettings ? "Đang lưu..." : "Lưu cài đặt"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

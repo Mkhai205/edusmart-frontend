@@ -27,6 +27,7 @@ import {
   listQuizzes,
   listFlashcardSets,
   listLearningGoals,
+  listLearningGoalProgressLogs,
   getLearningGoalDashboard,
   createLearningGoal,
 } from "@/features/workspace/services/learningService";
@@ -36,22 +37,9 @@ import type {
   FlashcardSetListItem,
   LearningGoal,
   LearningGoalDashboard,
+  LearningGoalProgressLog,
   GoalRecurrenceType,
 } from "@/features/workspace/types";
-
-const progressData = [
-  { name: "Tuần 1", score: 65, id: "w1" },
-  { name: "Tuần 2", score: 70, id: "w2" },
-  { name: "Tuần 3", score: 85, id: "w3" },
-  { name: "Tuần 4", score: 92, id: "w4" },
-];
-
-const monthlyProgressData = [
-  { name: "Tháng 1", score: 58, id: "m1" },
-  { name: "Tháng 2", score: 64, id: "m2" },
-  { name: "Tháng 3", score: 78, id: "m3" },
-  { name: "Tháng 4", score: 88, id: "m4" },
-];
 
 interface ActivityItem {
   id: string;
@@ -72,6 +60,7 @@ export function Dashboard() {
   const [flashcards, setFlashcards] = useState<FlashcardSetListItem[]>([]);
   const [goals, setGoals] = useState<LearningGoal[]>([]);
   const [goalDashboard, setGoalDashboard] = useState<LearningGoalDashboard | null>(null);
+  const [goalProgressLogs, setGoalProgressLogs] = useState<LearningGoalProgressLog[]>([]);
   const [showGoalForm, setShowGoalForm] = useState(false);
   const [goalTitle, setGoalTitle] = useState("");
   const [goalTargetDate, setGoalTargetDate] = useState("");
@@ -102,7 +91,7 @@ export function Dashboard() {
           listDocuments(20, 0),
           listQuizzes(20, 0),
           listFlashcardSets(20, 0),
-          listLearningGoals(10, 0),
+          listLearningGoals({ limit: 10, offset: 0 }),
           getLearningGoalDashboard(),
         ]);
 
@@ -117,6 +106,14 @@ export function Dashboard() {
       }
       if (goalsResult.status === "fulfilled") {
         setGoals(goalsResult.value);
+
+        const logsByGoal = await Promise.allSettled(
+          goalsResult.value.slice(0, 10).map((goal) => listLearningGoalProgressLogs(goal.id, 30, 0)),
+        );
+        const allLogs = logsByGoal
+          .filter((item): item is PromiseFulfilledResult<LearningGoalProgressLog[]> => item.status === "fulfilled")
+          .flatMap((item) => item.value);
+        setGoalProgressLogs(allLogs);
       }
       if (dashboardResult.status === "fulfilled") {
         setGoalDashboard(dashboardResult.value);
@@ -148,6 +145,24 @@ export function Dashboard() {
     return goals.filter((goal) => goal.status === "in_progress").slice(0, 4);
   }, [goals]);
 
+  const getGoalProgressPercent = (goal: LearningGoal): number => {
+    const milestones = goal.milestones ?? [];
+    if (milestones.length === 0) {
+      return Math.max(0, Math.min(100, goal.progress));
+    }
+
+    const completedMilestones = milestones.filter((milestone) => {
+      const milestoneProgress = typeof milestone.progress === "number"
+        ? milestone.progress
+        : milestone.completed
+          ? 100
+          : 0;
+      return milestoneProgress >= 100;
+    }).length;
+
+    return Math.round((completedMilestones / milestones.length) * 100);
+  };
+
   const completionRate = useMemo(() => {
     if (!goalDashboard) {
       return 0;
@@ -161,9 +176,67 @@ export function Dashboard() {
   }, [goalDashboard]);
 
   const studyStreakDays = useMemo(() => {
-    const base = goalDashboard?.due_this_week_count ?? 0;
-    return Math.max(base + 5, 1);
-  }, [goalDashboard]);
+    const toDateKey = (value: string) => {
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) {
+        return null;
+      }
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    const activityKeys = new Set<string>();
+
+    documents.forEach((item) => {
+      const key = toDateKey(item.created_at);
+      if (key) activityKeys.add(key);
+    });
+    quizzes.forEach((item) => {
+      const key = toDateKey(item.created_at);
+      if (key) activityKeys.add(key);
+    });
+    flashcards.forEach((item) => {
+      const key = toDateKey(item.created_at);
+      if (key) activityKeys.add(key);
+    });
+    goalProgressLogs.forEach((item) => {
+      const key = toDateKey(item.created_at);
+      if (key) activityKeys.add(key);
+    });
+
+    if (activityKeys.size === 0) {
+      return 0;
+    }
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+
+    const toKeyFromDate = (date: Date) => {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, "0");
+      const day = String(date.getDate()).padStart(2, "0");
+      return `${year}-${month}-${day}`;
+    };
+
+    let cursor = activityKeys.has(toKeyFromDate(today)) ? today : yesterday;
+    if (!activityKeys.has(toKeyFromDate(cursor))) {
+      return 0;
+    }
+
+    let streak = 0;
+    while (activityKeys.has(toKeyFromDate(cursor))) {
+      streak += 1;
+      cursor = new Date(cursor);
+      cursor.setDate(cursor.getDate() - 1);
+    }
+
+    return streak;
+  }, [documents, quizzes, flashcards, goalProgressLogs]);
 
   const recentActivity = useMemo<ActivityItem[]>(() => {
     const docActivities: ActivityItem[] = documents.map((doc) => ({
@@ -195,7 +268,71 @@ export function Dashboard() {
       .slice(0, 4);
   }, [documents, flashcards, quizzes]);
 
-  const performanceDataset = performanceView === "weekly" ? progressData : monthlyProgressData;
+  const weeklyProgressData = useMemo(() => {
+    const now = new Date();
+    const dayOfWeek = now.getDay();
+    const distanceToMonday = dayOfWeek === 0 ? 6 : dayOfWeek - 1;
+    const currentWeekStart = new Date(now);
+    currentWeekStart.setDate(now.getDate() - distanceToMonday);
+    currentWeekStart.setHours(0, 0, 0, 0);
+
+    return Array.from({ length: 4 }).map((_, idx) => {
+      const weekOffset = 3 - idx;
+      const start = new Date(currentWeekStart);
+      start.setDate(currentWeekStart.getDate() - weekOffset * 7);
+      const end = new Date(start);
+      end.setDate(start.getDate() + 6);
+      end.setHours(23, 59, 59, 999);
+
+      const points = goalProgressLogs
+        .filter((log) => {
+          const t = new Date(log.created_at).getTime();
+          return t >= start.getTime() && t <= end.getTime();
+        })
+        .map((log) => log.new_progress);
+
+      const score = points.length
+        ? Math.round(points.reduce((sum, value) => sum + value, 0) / points.length)
+        : 0;
+
+      return {
+        id: `w${idx + 1}`,
+        name: `Tuần ${idx + 1}`,
+        score,
+      };
+    });
+  }, [goalProgressLogs]);
+
+  const monthlyProgressData = useMemo(() => {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat("vi-VN", { month: "numeric" });
+
+    return Array.from({ length: 4 }).map((_, idx) => {
+      const monthOffset = 3 - idx;
+      const monthDate = new Date(now.getFullYear(), now.getMonth() - monthOffset, 1);
+      const month = monthDate.getMonth();
+      const year = monthDate.getFullYear();
+
+      const points = goalProgressLogs
+        .filter((log) => {
+          const d = new Date(log.created_at);
+          return d.getMonth() === month && d.getFullYear() === year;
+        })
+        .map((log) => log.new_progress);
+
+      const score = points.length
+        ? Math.round(points.reduce((sum, value) => sum + value, 0) / points.length)
+        : 0;
+
+      return {
+        id: `m${idx + 1}`,
+        name: `Tháng ${formatter.format(monthDate)}`,
+        score,
+      };
+    });
+  }, [goalProgressLogs]);
+
+  const performanceDataset = performanceView === "weekly" ? weeklyProgressData : monthlyProgressData;
 
   const formatTimeAgo = (value: string) => {
     const timestamp = new Date(value).getTime();
@@ -240,12 +377,20 @@ export function Dashboard() {
       });
 
       const [goalsResult, dashboardResult] = await Promise.all([
-        listLearningGoals(10,0),
+        listLearningGoals({ limit: 10, offset: 0 }),
         getLearningGoalDashboard(),
       ]);
 
       setGoals(goalsResult);
       setGoalDashboard(dashboardResult);
+
+      const logsByGoal = await Promise.allSettled(
+        goalsResult.slice(0, 10).map((goal) => listLearningGoalProgressLogs(goal.id, 30, 0)),
+      );
+      const allLogs = logsByGoal
+        .filter((item): item is PromiseFulfilledResult<LearningGoalProgressLog[]> => item.status === "fulfilled")
+        .flatMap((item) => item.value);
+      setGoalProgressLogs(allLogs);
       setGoalTitle("");
       setGoalTargetDate("");
       setGoalRecurrence("weekly");
@@ -300,7 +445,7 @@ export function Dashboard() {
           </p>
           <div className="mt-5 space-y-2.5">
             <Link
-              href="/documents"
+              href="/documents?openUpload=1"
               className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#00A651] text-white rounded-lg font-medium hover:bg-[#008a42] transition-colors"
             >
               <Upload className="h-4 w-4" />
@@ -398,19 +543,26 @@ export function Dashboard() {
             )}
             {dueGoals.map((goal) => (
               <div key={goal.id} className="space-y-1.5">
+                {(() => {
+                  const progressPercent = getGoalProgressPercent(goal);
+                  return (
+                    <>
                 <div className="flex items-start justify-between">
                   <div>
                     <p className="text-sm font-semibold text-gray-900">{goal.title}</p>
-                    <p className="text-xs text-gray-500">Mục tiêu {goal.progress}% hoàn thành</p>
+                    <p className="text-xs text-gray-500">Mục tiêu {progressPercent}% hoàn thành</p>
                   </div>
-                  <span className="text-xs text-gray-600 font-medium">{goal.progress}%</span>
+                  <span className="text-xs text-gray-600 font-medium">{progressPercent}%</span>
                 </div>
                 <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-2 rounded-full bg-[#00A651]"
-                    style={{ width: `${Math.min(goal.progress, 100)}%` }}
+                    style={{ width: `${progressPercent}%` }}
                   />
                 </div>
+                    </>
+                  );
+                })()}
               </div>
             ))}
           </div>

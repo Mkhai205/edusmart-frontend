@@ -1,6 +1,8 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
+import { useRef } from "react";
+import { useSearchParams } from "next/navigation";
 import {
   CheckCircle2,
   Download,
@@ -70,9 +72,11 @@ function getSummaryStatusLabel(status: DocumentSummaryStatus["summary_status"]):
 }
 
 export function Documents() {
+  const searchParams = useSearchParams();
+  const uploadInputRef = useRef<HTMLInputElement | null>(null);
+  const [hasAutoOpenedUpload, setHasAutoOpenedUpload] = useState(false);
   const [documents, setDocuments] = useState<DocumentListItem[]>([]);
   const [selectedDocumentId, setSelectedDocumentId] = useState<string>("");
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const [documentDetail, setDocumentDetail] = useState<DocumentDetail | null>(null);
   const [extractionStatus, setExtractionStatus] = useState<DocumentExtractionStatusResponse | null>(null);
@@ -169,6 +173,21 @@ export function Documents() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  useEffect(() => {
+    const shouldOpenUpload = searchParams.get("openUpload") === "1";
+    if (!shouldOpenUpload || hasAutoOpenedUpload) {
+      return;
+    }
+
+    setHasAutoOpenedUpload(true);
+    window.setTimeout(() => {
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = "";
+        uploadInputRef.current.click();
+      }
+    }, 0);
+  }, [hasAutoOpenedUpload, searchParams]);
+
   const pollSummaryUntilDone = async (documentId: string, summaryId: string) => {
     for (let attempt = 0; attempt < 12; attempt += 1) {
       const latest = await getSummaryStatus(documentId, summaryId);
@@ -189,8 +208,9 @@ export function Documents() {
     setNotice("Bản tóm tắt đang tiếp tục xử lý, vui lòng tải lại sau ít phút.");
   };
 
-  const handleUpload = async () => {
-    if (!selectedFile) {
+  const handleUpload = async (fileToUpload?: File) => {
+
+    if (!fileToUpload) {
       setError("Vui lòng chọn tệp trước khi tải lên.");
       return;
     }
@@ -199,8 +219,10 @@ export function Documents() {
       setIsUploading(true);
       setError(null);
       setNotice(null);
-      const uploaded = await uploadDocument(selectedFile);
-      setSelectedFile(null);
+      const uploaded = await uploadDocument(fileToUpload);
+      if (uploadInputRef.current) {
+        uploadInputRef.current.value = "";
+      }
       setNotice("Tải tài liệu thành công.");
       await loadDocuments(uploaded.document_id);
     } catch (err) {
@@ -415,24 +437,32 @@ export function Documents() {
           <p className="mt-1 text-sm text-slate-600">Bố cục làm việc tập trung: đọc tài liệu, tóm tắt AI và tạo bài học trong một màn hình.</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
-          <label className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#00A651]">
-            <UploadCloud className="h-4 w-4" />
-            Chọn tệp
-            <input
-              type="file"
-              className="hidden"
-              accept=".pdf,.doc,.docx,.txt"
-              onChange={(event) => setSelectedFile(event.target.files?.[0] ?? null)}
-            />
-          </label>
           <button
             type="button"
-            onClick={() => void handleUpload()}
-            disabled={!selectedFile || isUploading}
-            className="rounded-xl bg-[#00A651] px-4 py-2 text-sm font-semibold text-white hover:bg-[#008f45] disabled:cursor-not-allowed disabled:opacity-50"
+            onClick={() => {
+              if (uploadInputRef.current) {
+                uploadInputRef.current.value = "";
+                uploadInputRef.current.click();
+              }
+            }}
+            className="inline-flex cursor-pointer items-center gap-2 rounded-xl border border-slate-200 bg-white px-4 py-2 text-sm font-semibold text-slate-700 hover:border-[#00A651]"
           >
-            {isUploading ? "Đang tải..." : "Tải lên"}
+            <UploadCloud className="h-4 w-4" />
+            Tải tài liệu
           </button>
+          <input
+            ref={uploadInputRef}
+            type="file"
+            className="hidden"
+            accept=".pdf,.doc,.docx,.txt"
+            onChange={(event) => {
+              const file = event.target.files?.[0] ?? null;
+              if (file) {
+                void handleUpload(file);
+              }
+            }}
+          />
+          {isUploading && <span className="text-xs text-slate-500">Đang tải tệp lên...</span>}
         </div>
       </div>
 
