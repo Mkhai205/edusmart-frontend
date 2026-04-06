@@ -281,7 +281,7 @@ export function Layout({ children }: LayoutProps) {
       </header>
 
       {/* Main Content */}
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 pb-6 pt-3 sm:px-6 sm:pt-4 sm:pb-8 lg:px-8 lg:pt-5">
+      <main className="flex-1 w-full mx-auto px-4 pb-6 pt-3 sm:px-6 sm:pt-4 sm:pb-8 lg:px-8 lg:pt-5">
         {children}
       </main>
 

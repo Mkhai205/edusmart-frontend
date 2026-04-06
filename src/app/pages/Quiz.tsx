@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
 import { CheckCircle2, Clock, XCircle } from "lucide-react";
 
 import { useAuthStore } from "@/features/auth/store/authStore";
@@ -219,6 +218,11 @@ export function Quiz() {
                   Bạn chọn: {selectedOption ?? "Bỏ qua"}
                 </p>
                 <p className="text-sm text-gray-700 mt-1">Đáp án đúng: {correctOption}</p>
+                {result.explanation && (
+                  <p className="text-sm text-gray-700 mt-2">
+                    Giải thích: {result.explanation}
+                  </p>
+                )}
                 <button
                   type="button"
                   onClick={() => {
@@ -300,6 +304,20 @@ export function Quiz() {
             );
           })}
         </div>
+
+        {submitResult && (() => {
+          const currentResult = resultByQuestionIndex.get(question.question_index);
+          if (!currentResult?.explanation) {
+            return null;
+          }
+
+          return (
+            <div className="mt-5 rounded-xl border border-blue-200 bg-blue-50 p-4">
+              <p className="text-sm font-semibold text-blue-800">Giải thích câu này</p>
+              <p className="mt-1 text-sm text-blue-900">{currentResult.explanation}</p>
+            </div>
+          );
+        })()}
 
         <div className="mt-8 pt-6 border-t border-gray-100 flex justify-end gap-4">
           {!submitResult ? (

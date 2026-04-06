@@ -2,11 +2,14 @@
 
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
 
 interface MarkdownPreviewProps {
     title?: string;
     content: string;
     compact?: boolean;
+    embedded?: boolean;
 }
 
 function extractEmbeddableHtml(content: string): { markdown: string; embeds: string[] } {
@@ -37,8 +40,31 @@ export function MarkdownPreview({
     title = "Bản tóm tắt AI",
     content,
     compact = false,
+    embedded = false,
 }: MarkdownPreviewProps) {
     const parsed = extractEmbeddableHtml(content);
+
+    if (embedded) {
+        return (
+            <div>
+                {parsed.embeds.map((embed, index) => (
+                    <div key={`embed-${index}`} className="mb-4 rounded-xl border border-slate-200">
+                        <iframe
+                            title={`summary-embed-${index + 1}`}
+                            sandbox="allow-scripts allow-same-origin"
+                            srcDoc={embed}
+                            className="h-[340px] w-full rounded-xl"
+                        />
+                    </div>
+                ))}
+                <div className="prose prose-slate max-w-none prose-headings:font-semibold prose-a:text-emerald-700">
+                    <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                        {parsed.markdown}
+                    </ReactMarkdown>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <section className={`rounded-3xl border border-slate-200 bg-white p-5 shadow-sm ${compact ? "h-full" : ""}`}>
@@ -61,7 +87,9 @@ export function MarkdownPreview({
                         />
                     </div>
                 ))}
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{parsed.markdown}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm, remarkMath]} rehypePlugins={[rehypeKatex]}>
+                    {parsed.markdown}
+                </ReactMarkdown>
             </div>
         </section>
     );

@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "@react-pdf-viewer/core/lib/styles/index.css";
 @import "@react-pdf-viewer/default-layout/lib/styles/index.css";
+@import "katex/dist/katex.min.css";
 
 :root {
     --background: #f4f4f3;
