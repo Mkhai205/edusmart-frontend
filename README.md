@@ -27,6 +27,19 @@ npm run start
 npm run lint
 ```
 
+## Bien moi truong
+
+Tao file `.env.local` tu `.env.example` va dieu chinh theo moi truong:
+
+```bash
+cp .env.example .env.local
+```
+
+- `NEXT_PUBLIC_API_BASE_URL`: dia chi backend API.
+- `NEXT_PUBLIC_STATS_USE_MOCK_FALLBACK`: bat (`true`) de dung du lieu mock cho trang Statistics khi tat ca endpoint deu unavailable.
+- `NEXT_PUBLIC_STATS_PROGRESS_GOALS_LIMIT`: gioi han so goal lay progress logs (giam so request).
+- `NEXT_PUBLIC_STATS_PROGRESS_LOGS_LIMIT`: so log toi da moi goal cho bieu do theo thang.
+
 ## Cau truc can nho
 
 - `src/app`: route va layout theo App Router.
